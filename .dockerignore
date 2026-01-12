@@ -1,0 +1,47 @@
+# ============================================
+# .DOCKERIGNORE
+# ============================================
+# Funciona como .gitignore, mas para o Docker
+# Arquivos listados aqui NÃO são enviados para o Docker durante o build
+# Benefícios:
+# 1. Build mais rápido (menos arquivos para copiar)
+# 2. Imagem mais leve
+# 3. Evita vazar segredos acidentalmente
+
+# Pastas de build do .NET (serão recriadas no container)
+**/bin/
+**/obj/
+
+# Arquivos de IDE
+.idea/
+.vs/
+.vscode/
+*.user
+*.suo
+
+# Git
+.git/
+.gitignore
+
+# Docker (não precisamos copiar Dockerfile para dentro da imagem)
+Dockerfile*
+docker-compose*
+.dockerignore
+
+# Documentação
+*.md
+LICENSE
+
+# Arquivos de ambiente local (IMPORTANTE: nunca copiar segredos!)
+.env
+.env.*
+appsettings.Development.json
+
+# Testes (se tiver projeto de testes separado)
+**/Tests/
+**/*.Tests/
+**/TestResults/
+
+# Logs
+*.log
+logs/
