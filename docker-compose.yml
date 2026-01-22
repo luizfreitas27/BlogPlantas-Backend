@@ -1,63 +1,64 @@
-# ============================================
-# DOCKER COMPOSE
-# ============================================
-# Orquestra múltiplos containers e simplifica configuração
-# Em vez de comandos docker longos, você usa: docker compose up
-
-# Versão do formato (3.8 é estável e amplamente suportada)
-version: '3.8'
+version: "3.9"
 
 services:
-  # ==========================================
-  # API - Nossa aplicação .NET
-  # ==========================================
-  api:
-    # Nome do container (opcional, mas útil para identificar)
-    container_name: blogplantas-api
-
-    # BUILD: Constrói a imagem a partir do Dockerfile
-    build:
-      context: .          # Diretório base (onde está o Dockerfile)
-      dockerfile: Dockerfile
-
-    # PORTS: Mapeia porta do host para o container
-    # Formato: "PORTA_HOST:PORTA_CONTAINER"
-    # Acesse em http://localhost:5000
-    ports:
-      - "5000:8080"
-
-    # ENVIRONMENT: Variáveis de ambiente
-    # É aqui que você configura segredos em produção!
-    # Sobrescrevem o appsettings.json
+  postgres:
+    image: postgres:16-alpine
+    container_name: blog-plantas-postgres
     environment:
-      # Ambiente de execução (Development, Staging, Production)
-      - ASPNETCORE_ENVIRONMENT=Production
+      POSTGRES_USER: ${DB_USER} 
+      POSTGRES_PASSWORD: ${DB_PASSWORD} 
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - blogplantas-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-      # Connection string - use __ para separar níveis do JSON
-      # Em produção, NUNCA deixe a senha aqui - use .env ou secrets
-      - ConnectionStrings__DefaultConnection=Host=db.egapgdpextrykcuxvhke.supabase.co;Database=postgres;Username=postgres;Password=${DB_PASSWORD};SSL Mode=Require;Trust Server Certificate=true
+  redis:
+    image: redis:7-alpine
+    container_name: blog-plantas-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    networks:
+      - blogplantas-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
 
-    # RESTART: Política de reinício
-    # - no: nunca reinicia
-    # - always: sempre reinicia
-    # - on-failure: reinicia só se falhar
-    # - unless-stopped: sempre, exceto se você parar manualmente
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: blog-plantas-pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - blogplantas-network
     restart: unless-stopped
 
-    # HEALTHCHECK: Verifica se a aplicação está saudável
-    # Docker pode reiniciar containers não saudáveis automaticamente
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s      # Verifica a cada 30 segundos
-      timeout: 10s       # Timeout de 10 segundos
-      retries: 3         # 3 falhas = unhealthy
-      start_period: 40s  # Espera 40s antes de começar a verificar
+volumes:
+  postgres-data:
+  redis-data:
+  pgadmin-data:
 
-# ============================================
-# NETWORKS (opcional, mas boa prática)
-# ============================================
-# Redes isolam comunicação entre containers
-# Se adicionar mais serviços (Redis, etc), eles se comunicam pela rede
 networks:
-  default:
-    name: blogplantas-network
+  blogplantas-network:
+    driver: bridge
