@@ -20,6 +20,11 @@ public class UserMapping : IEntityTypeConfiguration<User>
             .HasColumnName("name")
             .HasMaxLength(100)
             .IsRequired();
+        
+        builder.Property(u => u.Username)
+            .HasColumnName("username")
+            .HasMaxLength(100)
+            .IsRequired();
 
         builder.Property(u => u.Email)
             .HasColumnName("email")
